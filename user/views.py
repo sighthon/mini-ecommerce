@@ -1,6 +1,8 @@
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
 
-from .serializers import AdminSignupSerializer, AdminLoginSerializer
+from .permissions import IsAdmin
+from .serializers import AdminSignupSerializer, AdminLoginSerializer, CustomerSignupSerializer, CustomerLoginSerializer
 from rest_framework import decorators, permissions, response, request, status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import login as django_login
@@ -39,7 +41,7 @@ def admin_login(req: request.Request) -> response.Response:
         try:
             token = Token.objects.get_or_create(user=user)
         except Exception:
-            return response.Response({"Message": "Login failed."}, status=status.HTTP_400_BAD_REQUEST)
+            return response.Response({"Message": "Admin Login failed."}, status=status.HTTP_400_BAD_REQUEST)
 
         return response.Response(
             {"auth_token": token[0].key},
@@ -47,3 +49,49 @@ def admin_login(req: request.Request) -> response.Response:
         )
 
     return response.Response(admin_login_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# API for Customer Signup
+@decorators.api_view(["POST"])
+@decorators.permission_classes([IsAuthenticated, IsAdmin])
+def customer_signup(req: request.Request) -> response.Response:
+    """Signup for Customers"""
+    cust_signup_ser = CustomerSignupSerializer(data=req.data)
+
+    # If the request data is valid, save the data
+    if cust_signup_ser.is_valid():
+        cust_signup_ser.save()
+        return response.Response(
+            {"Message": f"Successfully registered {cust_signup_ser.validated_data.get('username')}"},
+            status=status.HTTP_200_OK
+        )
+
+    return response.Response(cust_signup_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# API for Customer Login
+@decorators.api_view(["POST"])
+@decorators.permission_classes([permissions.AllowAny])
+def customer_login(req: request.Request) -> response.Response:
+    """Login for customers"""
+    cust_login_ser = CustomerLoginSerializer(data=req.data)
+
+    # If the request data is valid, save the data
+    if cust_login_ser.is_valid():
+        user = cust_login_ser.validated_data.get('user')
+
+        # TODO: Validate the OTP
+
+        # django_login(request, user)
+
+        try:
+            token = Token.objects.get_or_create(user=user)
+        except Exception:
+            return response.Response({"Message": "Customer Login failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return response.Response(
+            {"auth_token": token[0].key},
+            status=status.HTTP_200_OK
+        )
+
+    return response.Response(cust_login_ser.errors, status=status.HTTP_400_BAD_REQUEST)
