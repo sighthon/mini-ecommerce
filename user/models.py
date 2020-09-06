@@ -16,11 +16,15 @@ class User(AbstractUser):
     base_type = Types.CUSTOMER
 
     type = models.CharField(null=False, max_length=50, choices=Types.choices, default=base_type)
-    username = models.CharField(null=True, max_length=30)
+    username = models.CharField(null=False, max_length=30, unique=True)
     password = models.CharField(null=True, max_length=30)
     mobile_number = models.CharField(null=True, max_length=13)
 
-    USERNAME_FIELD = "id"
+    USERNAME_FIELD = "username"
+
+    def save(self, *args, **kwargs):
+        self.type = self.base_type
+        return super().save(*args, **kwargs)
 
 
 class AdminManager(models.Manager):
@@ -33,7 +37,7 @@ class AdminManager(models.Manager):
 class Admin(User):
     """Model for Admin users"""
     base_type = User.Types.ADMIN
-    objects = AdminManager
+    objects = AdminManager()
 
     class Meta:
         proxy = True
@@ -48,6 +52,8 @@ class CustomerManager(models.Manager):
 
 class Customer(User):
     """Model for Customers"""
+    base_type = User.Types.CUSTOMER
+    objects = CustomerManager()
 
     class Meta:
         proxy = True
@@ -62,6 +68,8 @@ class SalesAgentManager(models.Manager):
 
 class SalesAgent(User):
     """Model for Sales Agents"""
+    base_type = User.Types.CUSTOMER
+    objects = SalesAgentManager()
 
     class Meta:
         proxy = True
