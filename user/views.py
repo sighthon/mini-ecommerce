@@ -1,4 +1,3 @@
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from .permissions import IsAdmin
@@ -6,7 +5,6 @@ from .serializers import AdminSignupSerializer, AdminLoginSerializer, CustomerSi
     SalesAgentSignupSerializer, SalesAgentLoginSerializer
 from rest_framework import decorators, permissions, response, request, status
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import login as django_login
 
 
 # API for Admin Signup

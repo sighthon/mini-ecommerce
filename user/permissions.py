@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-from .models import User
+from user.models import User
 
 
 class IsAdmin(permissions.BasePermission):
