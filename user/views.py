@@ -2,7 +2,8 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from .permissions import IsAdmin
-from .serializers import AdminSignupSerializer, AdminLoginSerializer, CustomerSignupSerializer, CustomerLoginSerializer
+from .serializers import AdminSignupSerializer, AdminLoginSerializer, CustomerSignupSerializer, CustomerLoginSerializer, \
+    SalesAgentSignupSerializer, SalesAgentLoginSerializer
 from rest_framework import decorators, permissions, response, request, status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import login as django_login
@@ -95,3 +96,46 @@ def customer_login(req: request.Request) -> response.Response:
         )
 
     return response.Response(cust_login_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# API for Sales Agent Signup
+@decorators.api_view(["POST"])
+@decorators.permission_classes([IsAuthenticated, IsAdmin])
+def sales_agent_signup(req: request.Request) -> response.Response:
+    """Signup for Sales Agent"""
+    sales_agent_ser = SalesAgentSignupSerializer(data=req.data)
+
+    # If the request data is valid, save the data
+    if sales_agent_ser.is_valid():
+        sales_agent_ser.save()
+        return response.Response(
+            {"Message": f"Successfully registered {sales_agent_ser.validated_data.get('username')}"},
+            status=status.HTTP_200_OK
+        )
+
+    return response.Response(sales_agent_ser.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# API for Sales Agent Login
+@decorators.api_view(["POST"])
+@decorators.permission_classes([permissions.AllowAny])
+def sales_agent_login(req: request.Request) -> response.Response:
+    """Login for admins"""
+    sales_agent_login_ser = SalesAgentLoginSerializer(data=req.data)
+
+    # If the request data is valid, save the data
+    if sales_agent_login_ser.is_valid():
+        user = sales_agent_login_ser.validated_data.get('user')
+        # django_login(request, user)
+
+        try:
+            token = Token.objects.get_or_create(user=user)
+        except Exception:
+            return response.Response({"Message": "Sales Agent Login failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return response.Response(
+            {"auth_token": token[0].key},
+            status=status.HTTP_200_OK
+        )
+
+    return response.Response(sales_agent_login_ser.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -68,7 +68,7 @@ class SalesAgentManager(models.Manager):
 
 class SalesAgent(User):
     """Model for Sales Agents"""
-    base_type = User.Types.CUSTOMER
+    base_type = User.Types.SALES_AGENT
     objects = SalesAgentManager()
 
     class Meta:

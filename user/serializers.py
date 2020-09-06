@@ -3,7 +3,7 @@ from typing import Any, Dict
 from rest_framework import serializers, exceptions
 from rest_framework.validators import UniqueValidator
 
-from .models import User, Admin, Customer
+from .models import User, Admin, Customer, SalesAgent
 
 
 class AdminSignupSerializer(serializers.ModelSerializer):
@@ -41,7 +41,7 @@ class AdminLoginSerializer(serializers.ModelSerializer):
         try:
             user = Admin.objects.get(username=username, password=password)
         except Admin.DoesNotExist:
-            exc_msg = "Incorrect username or password"
+            exc_msg = "Incorrect username or password for an Admin."
             raise exceptions.ValidationError(exc_msg)
 
         if user:
@@ -81,7 +81,46 @@ class CustomerLoginSerializer(serializers.ModelSerializer):
         try:
             user = Customer.objects.get(mobile_number=mobile_number)
         except Customer.DoesNotExist:
-            exc_msg = "Invalid mobile number provided"
+            exc_msg = "Invalid mobile number provided for a customer."
+            raise exceptions.ValidationError(exc_msg)
+
+        if user:
+            data["user"] = user
+
+        return data
+
+
+class SalesAgentSignupSerializer(AdminSignupSerializer, serializers.ModelSerializer):
+    """Serializer for customer signup"""
+
+    class Meta:
+        model = SalesAgent
+        fields = ["username", "password"]
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+
+class SalesAgentLoginSerializer(serializers.ModelSerializer):
+    """Serializer for admin login"""
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True)
+
+    class Meta:
+        model = SalesAgent
+        fields = ["username", "password"]
+        extra_kwargs = {
+            'password': {'read_only': True}
+        }
+
+    def validate(self, data: Dict) -> Dict:
+        username = data.get('username')
+        password = data.get('password')
+
+        try:
+            user = SalesAgent.objects.get(username=username, password=password)
+        except SalesAgent.DoesNotExist:
+            exc_msg = "Incorrect username or password for a sales agent."
             raise exceptions.ValidationError(exc_msg)
 
         if user:
