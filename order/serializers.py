@@ -38,7 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
         # check if order quantities are valid and get those quantities booked
         products_modified = {}
         try:
-            for item_data in items_data:
+            for idx, item_data in enumerate(items_data):
                 product = item_data['item']
 
                 if product.status != Product.StatusChoices.IN_STOCK:
@@ -52,6 +52,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 product.stock -= item_data["quantity"]
                 product.save()
                 products_modified[product.id] = (product, item_data["quantity"])
+
+                item_data["item_price"] = product.price
         except Exception as e:
             # give back the quantity to product stocks
             for product_id, data in products_modified:

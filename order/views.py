@@ -1,9 +1,12 @@
-from rest_framework import viewsets
+from typing import Dict, List
+
+from rest_framework import viewsets, request, response
+from rest_framework.decorators import action
 
 from user.models import Customer, User
 from .permissions import OrderPermission
 
-from .models import Order
+from .models import Order, OrderItem
 from .serializers import OrderSerializer
 
 
@@ -27,3 +30,22 @@ class OrderViewSet(viewsets.ModelViewSet):
                 pass
 
         return query_set
+
+    @action(methods=["get"], detail=False)
+    def past_order_product_details(self, request: request.Request, *args: List, **kwargs: Dict) -> response.Response:
+        """List all the details for the past products ordered"""
+        queryset = self.get_queryset()
+        if not len(queryset):
+            return response.Response({})
+
+        # get unique products
+        unique_prod_set = set()
+        past_order_items = [
+            order_item for order_item in OrderItem.objects.filter(order__in=queryset).order_by('-id')
+            if order_item.item not in unique_prod_set and not unique_prod_set.add(order_item.item)
+        ]
+        response_data = {"past_ordered_products": []}
+        for past_order_item in past_order_items:
+            response_data["past_ordered_products"].append({"name": past_order_item.item.name, "current_price":
+                past_order_item.item.price, "past_order_price": past_order_item.item_price})
+        return response.Response(response_data)
