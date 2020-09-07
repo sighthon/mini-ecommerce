@@ -18,16 +18,22 @@ class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [OrderPermission]
 
     def get_queryset(self):
-        queryset = self.queryset
+        query_set = self.queryset
 
         # If the request is from a customer, filter the queryset
         # to show fetch only orders from that customer
         if self.request.user.type == User.Types.CUSTOMER:
             try:
                 user = Customer.objects.get(id=self.request.user.id)
-                query_set = queryset.filter(customer=user.id)
+                query_set = query_set.filter(customer=user.id)
             except Customer.DoesNotExist:
                 pass
+
+        # filter on query params
+        if self.request.GET.get('customer'):
+            query_set = query_set.filter(customer=self.request.GET.get('customer'))
+        if self.request.GET.get('status'):
+            query_set = query_set.filter(status=self.request.GET.get('status'))
 
         return query_set
 
