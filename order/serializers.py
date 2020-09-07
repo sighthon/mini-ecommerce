@@ -19,7 +19,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["order_items", "customer"]
+        fields = ["order_items", "customer", "status"]
 
     def create(self, validated_data):
         """Override create to add custom field values not passed in the request"""
@@ -67,3 +67,27 @@ class OrderSerializer(serializers.ModelSerializer):
             OrderItem.objects.create(order=order, **item_data)
 
         return order
+
+    def update(self, instance, validated_data):
+        order_hierarchy = {
+            "ordered": 0,
+            "accepted": 1,
+            "delivered": 2,
+            "cancelled": 2
+        }
+
+        status = validated_data['status']
+
+        if instance.status not in order_hierarchy or status not in order_hierarchy:
+            exc_msg = f"Cannot update the order status to {status}"
+            raise exceptions.ValidationError(exc_msg)
+
+        if order_hierarchy[status] <= order_hierarchy[instance.status]:
+            exc_msg = f"Cannot update the order status from {instance.status} to {status}"
+            raise exceptions.ValidationError(exc_msg)
+
+        if status in ["accepted"]:
+            # TODO: create an invoice
+            print("Invoice created")
+
+        return super(OrderSerializer, self).update(instance, validated_data)
