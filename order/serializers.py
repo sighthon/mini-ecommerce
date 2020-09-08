@@ -1,5 +1,7 @@
+from django.db.models import Sum
 from rest_framework import serializers, exceptions
 
+from invoice.serializers import InvoiceSerializer
 from product.models import Product
 from product.serializers import ProductSerializer
 from user.models import Customer
@@ -19,7 +21,10 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["order_items", "customer", "status"]
+        fields = ["order_items", "customer", "status", "description"]
+        extra_kwargs = {
+            'customer': {'read_only': True}
+        }
 
     def create(self, validated_data):
         """Override create to add custom field values not passed in the request"""
@@ -69,6 +74,9 @@ class OrderSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
+        # update the sales sales agent
+        validated_data['sales_agent'] = self.context['request'].user
+
         order_hierarchy = {
             "ordered": 0,
             "accepted": 1,
@@ -88,6 +96,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
         if status in ["accepted"]:
             # TODO: create an invoice
-            print("Invoice created")
+            invoice_data = {
+                "order": instance.id,
+                "customer": instance.customer.id,
+                "sales_agent": self.context['request'].user.id,
+                "invoice_total": sum([a.total_cost for a in instance.order_items.all()])
+            }
+            invoice_ser = InvoiceSerializer(data=invoice_data)
+            invoice_ser.is_valid(raise_exception=True)
+            invoice_ser.save()
+
+            # TODO: create a financial ledger
+            print("Financial ledger created")
+
+            # TODO: send an SMS to the customer
+            print("SMS sent")
 
         return super(OrderSerializer, self).update(instance, validated_data)
