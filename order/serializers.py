@@ -1,9 +1,9 @@
 from django.db.models import Sum
 from rest_framework import serializers, exceptions
 
-from invoice.serializers import InvoiceSerializer
+from invoice.models import FinancialLedger
+from invoice.serializers import InvoiceSerializer, FinancialLedgerSerializer
 from product.models import Product
-from product.serializers import ProductSerializer
 from user.models import Customer
 from .models import Order, OrderItem
 
@@ -95,7 +95,7 @@ class OrderSerializer(serializers.ModelSerializer):
             raise exceptions.ValidationError(exc_msg)
 
         if status in ["accepted"]:
-            # TODO: create an invoice
+            # create an invoice
             invoice_data = {
                 "order": instance.id,
                 "customer": instance.customer.id,
@@ -104,12 +104,26 @@ class OrderSerializer(serializers.ModelSerializer):
             }
             invoice_ser = InvoiceSerializer(data=invoice_data)
             invoice_ser.is_valid(raise_exception=True)
-            invoice_ser.save()
+            inv = invoice_ser.save()
 
-            # TODO: create a financial ledger
-            print("Financial ledger created")
+            # create a financial ledger
+            # get previous balance for the customer
+            ledgers = FinancialLedger.objects.filter(invoice__customer=instance.customer).order_by('-id')
+            if not ledgers:
+                previous_balance = 0
+            else:
+                previous_balance = ledgers[0].balance
 
-            # TODO: send an SMS to the customer
+            ledger_data = {
+                "invoice": inv.id,
+                "amount": inv.invoice_total,
+                "balance": previous_balance + inv.invoice_total
+            }
+            fl_ser = FinancialLedgerSerializer(data=ledger_data)
+            fl_ser.is_valid(raise_exception=True)
+            fl_ser.save()
+
+            # TODO: send an SMS to the customer asynchronously
             print("SMS sent")
 
         return super(OrderSerializer, self).update(instance, validated_data)

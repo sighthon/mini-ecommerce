@@ -20,5 +20,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include("product.urls"), name="product"),
     path('api/', include("order.urls"), name="order"),
-    path('api/', include("user.urls"), name="user")
+    path('api/', include("user.urls"), name="user"),
+    path('api/', include("invoice.urls"), name="invoice"),
 ]
