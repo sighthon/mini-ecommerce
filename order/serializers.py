@@ -90,10 +90,11 @@ class OrderSerializer(serializers.ModelSerializer):
             exc_msg = f"Cannot update the order status to {status}"
             raise exceptions.ValidationError(exc_msg)
 
-        if order_hierarchy[status] <= order_hierarchy[instance.status]:
+        if order_hierarchy[status] - order_hierarchy[instance.status] != 1:
             exc_msg = f"Cannot update the order status from {instance.status} to {status}"
             raise exceptions.ValidationError(exc_msg)
 
+        # If changing an order status to accepted, add an invoice and a financial ledger
         if status in ["accepted"]:
             # create an invoice
             invoice_data = {
@@ -108,14 +109,15 @@ class OrderSerializer(serializers.ModelSerializer):
 
             # create a financial ledger
             # get previous balance for the customer
-            ledgers = FinancialLedger.objects.filter(invoice__customer=instance.customer).order_by('-id')
+            ledgers = FinancialLedger.objects.filter(customer=instance.customer).order_by('-id')
             if not ledgers:
                 previous_balance = 0
             else:
                 previous_balance = ledgers[0].balance
 
             ledger_data = {
-                "invoice": inv.id,
+                "order": instance.id,
+                "customer": instance.customer.id,
                 "amount": inv.invoice_total,
                 "balance": previous_balance + inv.invoice_total
             }
@@ -125,5 +127,27 @@ class OrderSerializer(serializers.ModelSerializer):
 
             # TODO: send an SMS to the customer asynchronously
             print("SMS sent")
+
+        # if updating an order status to cancelled from accepted,
+        # add a reverse financial ledger entry
+        if instance.status == "accepted" and status == "cancelled":
+            # create a reverse financial ledger
+            # get previous balance for the customer
+            ledgers = FinancialLedger.objects.filter(customer=instance.customer).order_by('-id')
+            if not ledgers:
+                previous_balance = 0
+            else:
+                previous_balance = ledgers[0].balance
+
+            amount = -1 * sum([a.total_cost for a in instance.order_items.all()])
+            ledger_data = {
+                "order": instance.id,
+                "customer": instance.customer.id,
+                "amount": amount,
+                "balance": previous_balance + amount
+            }
+            fl_ser = FinancialLedgerSerializer(data=ledger_data)
+            fl_ser.is_valid(raise_exception=True)
+            fl_ser.save()
 
         return super(OrderSerializer, self).update(instance, validated_data)

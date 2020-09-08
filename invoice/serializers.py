@@ -10,8 +10,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class FinancialLedgerSerializer(serializers.ModelSerializer):
-    customer = serializers.ReadOnlyField(source='invoice.customer.id')
-
     class Meta:
         model = FinancialLedger
-        fields = ["invoice", "amount", "balance", "customer"]
+        fields = ["order", "customer", "amount", "balance", "customer"]

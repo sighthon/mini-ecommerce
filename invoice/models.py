@@ -33,7 +33,8 @@ class FinancialLedger(models.Model):
     class Meta:
         db_table = 'financial_ledger'
 
-    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, null=False, related_name="order_ledgers")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=False, related_name="customer_ledgers")
     transaction_date = models.DateTimeField(default=datetime.utcnow)
     amount = models.FloatField(null=False)
     balance = models.FloatField(null=False)
